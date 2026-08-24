@@ -17,6 +17,7 @@ It backs up anything it replaces to `<file>.bak-<timestamp>`, so it is safe to r
 | --- | --- | --- |
 | `prompt/SYSTEM.md` | `~/.pi/agent/SYSTEM.md` | Global system prompt: critical rules, minimal diffs, no comment slop, no phased handoffs |
 | `agent/AGENTS.md` | `~/.pi/agent/AGENTS.md` | Cross-repo working rules — verification habits, editing discipline, bun/turbo conventions |
+| `agent/greetings.json` | `~/.pi/agent/greetings.json` | Time-of-day startup greetings (edit freely, no reinstall needed) |
 | `agent/settings.json` | `~/.pi/agent/settings.json` | Theme, default model, thinking levels, and the package list `install.sh` reads |
 | `extensions/*.ts` | `~/.pi/agent/extensions/` | Local extensions (below) |
 | `patches/*.patch` | vendored deps | Local fixes to installed packages, reapplied by `install.sh` |
@@ -39,6 +40,10 @@ Two local extensions, both reacting to pi's extension API rather than patching p
 `patches/pi-pending-compact-row.patch` restyles the running-job row that `pi-background-bash` draws through `pi-pending`: upstream pads the line to the full terminal width and reserves a 6-column elapsed field, so the highlighted bar spans the screen and sits out of line with the footer. The patch makes the highlight hug the text with the same one-space inset the footer uses, and sizes the elapsed column to its content.
 
 `node_modules` is gitignored inside the `pi-background-bash` checkout, so a reinstall silently drops this. `install.sh` reapplies it, and `patch --forward` makes that a no-op when it is already in place.
+
+`patches/powerline-welcome-greeting.patch` replaces powerline's hardcoded `Welcome back!` with a time-of-day greeting. Powerline's only knob is `welcome: true|false`, so there is no config hook to use instead. The greeting text lives in `agent/greetings.json` — buckets are `{ from, to, variants }` on a 24-hour clock, `to` is exclusive, and a bucket may wrap midnight (`22 → 5`). `{name}` expands to the `name` field, overridable per machine with `PI_GREET_NAME`, falling back to the home directory's basename. A missing or malformed file still greets, using built-in defaults.
+
+Editing `greetings.json` takes effect on the next start; only changes to the patch itself need `install.sh` re-run.
 
 ## Packages
 

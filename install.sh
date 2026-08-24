@@ -26,6 +26,8 @@ backup "$AGENT_DIR/SYSTEM.md"
 backup "$AGENT_DIR/AGENTS.md"
 cp "$REPO/prompt/SYSTEM.md" "$AGENT_DIR/SYSTEM.md"
 cp "$REPO/agent/AGENTS.md" "$AGENT_DIR/AGENTS.md"
+backup "$AGENT_DIR/greetings.json"
+cp "$REPO/agent/greetings.json" "$AGENT_DIR/greetings.json"
 
 echo "==> local extensions"
 for file in "$REPO"/extensions/*.ts; do
@@ -72,6 +74,19 @@ if [ -f "$PP_DIR/node_modules/pi-pending/index.ts" ]; then
   fi
 else
   echo "    ! pi-pending not found; run pi install first, then re-run this script" >&2
+fi
+
+# powerline hardcodes "Welcome back!" with no config hook; this swaps it for a
+# time-of-day greeting read from ~/.pi/agent/greetings.json
+PL_DIR="$AGENT_DIR/npm/node_modules/pi-powerline-footer"
+if [ -f "$PL_DIR/welcome.ts" ]; then
+  if patch -p1 -d "$PL_DIR" --forward --silent < "$REPO/patches/powerline-welcome-greeting.patch"; then
+    echo "    powerline welcome greeting applied"
+  else
+    echo "    powerline welcome greeting already applied (or upstream changed)"
+  fi
+else
+  echo "    ! pi-powerline-footer not found; run pi install first, then re-run this script" >&2
 fi
 
 echo "==> settings"
