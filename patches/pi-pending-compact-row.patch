@@ -1,16 +1,6 @@
---- a/node_modules/pi-pending/index.ts	2026-08-24 18:27:13
-+++ b/node_modules/pi-pending/index.ts	2026-08-24 18:27:13
-@@ -71,7 +71,8 @@
- }
- 
- const DEFAULT_WIDGET_ID = "pi-pending";
--const DEFAULT_MIN_ELAPSED_COLUMN_WIDTH = "4m 16s".length;
-+// wide enough that the column does not grow when elapsed crosses one minute
-+const DEFAULT_MIN_ELAPSED_COLUMN_WIDTH = "1m 0s".length;
- const GLOBAL_KEY = Symbol.for("pi-pending.globalState");
- 
- function globalState(): PiPendingGlobalState {
-@@ -152,7 +153,9 @@
+--- a/node_modules/pi-pending/index.ts	2026-08-24 18:32:33
++++ b/node_modules/pi-pending/index.ts	2026-08-24 18:32:33
+@@ -152,7 +152,9 @@
          const prefix = row.id
            ? `${elapsed} ${padToWidth(row.id, idWidth)} `
            : `${elapsed} `;

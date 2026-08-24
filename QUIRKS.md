@@ -80,12 +80,12 @@ When flushing the queue manually, do not re-do pi's own work:
 
 ## Vendored patches are the fragile part
 
-Two patches edit installed packages, and **neither location is under version control**:
+Two patches edit installed packages, and **neither location is under version control** — `pi-pending`'s is wiped by any reinstall of that checkout (`node_modules` is gitignored there), and powerline's by `pi update` or `pi install pi-powerline-footer`:
 
-| Patch | Target | Wiped by |
+| Patch | Target | What it changes |
 | --- | --- | --- |
-| `pi-pending-compact-row.patch` | `pi-background-bash/node_modules/pi-pending/index.ts` | any reinstall of that checkout (`node_modules` is gitignored there) |
-| `powerline-welcome-greeting.patch` | `~/.pi/agent/npm/node_modules/pi-powerline-footer/welcome.ts` | `pi update`, `pi install pi-powerline-footer` |
+| `pi-pending-compact-row.patch` | `pi-background-bash/node_modules/pi-pending/index.ts` | one hunk: stops the job row padding to full terminal width |
+| `powerline-welcome-greeting.patch` | `pi-powerline-footer/welcome.ts` | time-of-day greeting read from `greetings.json` |
 
 `install.sh` reapplies both, and each application is **verified by grepping for a marker afterwards** rather than trusting `patch`'s exit code. It runs with `--fuzz=0` (default fuzz can apply a hunk at the wrong offset on a drifted file), `--batch` (otherwise `patch` can sit waiting on a `File to patch:` prompt forever), and `-r -` (no `.rej` litter in `node_modules`). A real failure is reported as a failure and the script exits non-zero.
 
@@ -142,7 +142,19 @@ Two hard limits on that screen:
 
 ## The elapsed column grows as a job ages
 
-`formatElapsedDuration` emits `27s` (3 chars), then `1m 0s` (5), then `10m 12s` (7). Because the column is `max(minWidth, actualWidth)`, too small a minimum makes the row shift right the moment a job crosses a minute. Upstream's 6-wide default was stable on purpose; this setup uses `"1m 0s".length` (5) as the compromise — tight, and stable up to an hour.
+`formatElapsedDuration` emits `5s` (2 chars), `1m 10s` (6), `10m 12s` (7), `1h 0m 1s` (8). The column is `max(minWidth, actualWidth)`, so too small a minimum makes the job id slide right as the job ages.
+
+Upstream's default of `"4m 16s".length` (6) is deliberate, and **lowering it is a regression.** Measured, one job rendered at increasing ages:
+
+| min width | id column at 5s → 70s → 10m |
+| --- | --- |
+| 3 (first attempt) | 5 → 8 → 8 |
+| 5 (second attempt) | 7 → **8** → 8 |
+| 6 (upstream, kept) | 8 → 8 → 8 |
+
+So the patch leaves the minimum alone and only stops the row filling the terminal width. Anything above ~10 minutes shifts regardless; that is upstream behavior and not worth patching around.
+
+The lesson is the general one: both wrong values were picked by *reading* the format string, and both looked fine because a fresh job is always short. Only rendering the same job at nine different ages showed the shift.
 
 ## Settings worth remembering
 
