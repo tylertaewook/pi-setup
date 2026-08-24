@@ -73,6 +73,10 @@ PY
 
 echo "config"
 check "background-bash threshold present" "grep -q autoBackgroundAfterSeconds '$HOME/.pi-background-bash/config.json'"
+# an unset or unresolvable memory model silently falls back to the session model,
+# which means every background observer/reflector/dropper run bills at Opus rates
+check "observational-memory pinned off the session model" \
+  "python3 -c \"import json,sys; s=json.load(open('$REPO/agent/settings.json')); m=s['observational-memory']['model']; sys.exit(0 if m['id'] != s['defaultModel'] else 1)\""
 check "installer syntax" "bash -n '$REPO/install.sh'"
 
 echo

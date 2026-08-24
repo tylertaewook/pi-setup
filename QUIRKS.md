@@ -78,6 +78,21 @@ When flushing the queue manually, do not re-do pi's own work:
 - **Two interrupts start two flushes.** Both observe the same idle transition and submit the same text twice. Guard with an in-flight flag.
 - **`setEditorComponent(undefined)` means "restore pi's default editor"** and powerline's cleanup path relies on it (`index.ts:2387`). A wrapper that turns `undefined` into its own editor breaks that contract; pass `undefined` straight through.
 
+## Observational memory bills at the session model unless you pin it
+
+The observer, reflector, and dropper are separate LLM runs. If `observational-memory.model` is unset the extension **falls back to the session model** — so with Opus 5 as the default, every background summarization run was an Opus call. One long session did 29 observer + 17 reflector + 7 dropper runs, all mechanical extraction work that a small model does fine.
+
+It is pinned to Haiku 4.5 (`thinking: "off"`) in `agent/settings.json`, and `verify.sh` fails if it ever equals `defaultModel` again.
+
+The silent-failure mode to watch: a **wrong or unavailable** model id does not error, it logs `configured model ... not found, using session model` and quietly goes back to Opus. After changing that id, confirm the pair resolves:
+
+```bash
+pi --model amazon-bedrock/us.anthropic.claude-haiku-4-5-20251001-v1:0 \
+   --thinking off --no-session --no-tools -ne -ns -np -nc --offline -p "reply with exactly: RESOLVES"
+```
+
+Unrelated to cost, worth knowing when reading its notifications: the `%` in `active observation pool ~11,000 / 10,000 target (110%)` is the pool against **its own soft target**, not the context window. Over 100% is normal and is precisely what triggers the dropper to trim. Pool target is 10k, hard cap 20k, compaction at ~81k estimated source tokens.
+
 ## Vendored patches are the fragile part
 
 Two patches edit installed packages, and **neither location is under version control** — `pi-pending`'s is wiped by any reinstall of that checkout (`node_modules` is gitignored there), and powerline's by `pi update` or `pi install pi-powerline-footer`:

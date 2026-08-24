@@ -17,5 +17,12 @@
   "modelThinkingLevels": {
     "amazon-bedrock/us.anthropic.claude-opus-5": "low"
   },
-  "showLastPrompt": false
+  "showLastPrompt": false,
+  "observational-memory": {
+    "model": {
+      "provider": "amazon-bedrock",
+      "id": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "thinking": "off"
+    }
+  }
 }
