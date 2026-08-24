@@ -1,0 +1,11 @@
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+
+auth.json
+models-store.json
+mcp-cache.json
+run-history.jsonl
+sessions/

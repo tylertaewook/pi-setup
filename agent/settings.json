@@ -1,0 +1,21 @@
+{
+  "theme": "dark",
+  "defaultProvider": "amazon-bedrock",
+  "defaultModel": "us.anthropic.claude-opus-5",
+  "packages": [
+    "npm:pi-subagents",
+    "npm:pi-messenger",
+    "npm:pi-mcp-adapter",
+    "npm:pi-observational-memory",
+    "npm:@houndmcp/hound-mcp-pi",
+    "npm:pi-powerline-footer",
+    "npm:pi-terminal-theme",
+    "git:github.com/mowenroot/pi-background-bash"
+  ],
+  "defaultThinkingLevel": "medium",
+  "hideThinkingBlock": true,
+  "modelThinkingLevels": {
+    "amazon-bedrock/us.anthropic.claude-opus-5": "low"
+  },
+  "showLastPrompt": false
+}
