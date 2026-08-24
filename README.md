@@ -2,6 +2,8 @@
 
 My [pi](https://github.com/earendil-works/pi-mono) setup, tracked so a new machine is one script away.
 
+[`QUIRKS.md`](QUIRKS.md) is the companion: why each customization exists, what a pi or package update breaks, and the command that tells you which one broke. Start there when something stops working.
+
 ## Install
 
 ```bash
