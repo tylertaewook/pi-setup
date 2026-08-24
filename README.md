@@ -1,6 +1,6 @@
 # pi-setup
 
-My [pi](https://github.com/earendil-works/pi-mono) setup, tracked so a new machine is one script away. Structure follows [ahmadaccino/skillaccinos](https://github.com/ahmadaccino/skillaccinos), which this started from.
+My [pi](https://github.com/earendil-works/pi-mono) setup, tracked so a new machine is one script away.
 
 ## Install
 
