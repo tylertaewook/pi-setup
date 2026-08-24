@@ -6,28 +6,31 @@ type Keybindings = ConstructorParameters<typeof CustomEditor>[2];
 const IDLE_POLL_MS = 20;
 const IDLE_TIMEOUT_MS = 10_000;
 const PATCHED = Symbol.for("esc-flush-queue.patched");
+const STATE = Symbol.for("esc-flush-queue.state");
 
 type EditorLike = {
   handleInput(data: string): void;
   getText?(): string;
   setText?(text: string): void;
-  addToHistory?(text: string): void;
   isShowingAutocomplete?(): boolean;
   onSubmit?: ((text: string) => void) | undefined;
 };
 
-// the decorated editor outlives the ctx it was installed with, and pi throws from
-// any method on a ctx that a reload or session replacement has retired - so read
-// the ctx through this and never capture one in a closure
-let live: ExtensionContext | null = null;
+// /reload re-evaluates this module but keeps the same ui object, so an editor
+// installed before the reload still runs the OLD module's closure - shared state
+// has to live somewhere both instances can see
+type State = { live: ExtensionContext | null; flushing: boolean };
+const state: State = ((globalThis as Record<symbol, unknown>)[STATE] as State | undefined) ??
+  ((globalThis as Record<symbol, unknown>)[STATE] = { live: null, flushing: false } as State) as State;
 
 function ask<T>(read: (ctx: ExtensionContext) => T, fallback: T): T {
-  const ctx = live;
+  const ctx = state.live;
   if (!ctx) return fallback;
   try {
     return read(ctx);
   } catch {
-    live = null;
+    // pi throws from every method on a ctx retired by reload or session replacement
+    state.live = null;
     return fallback;
   }
 }
@@ -36,23 +39,29 @@ function flushable(editor: EditorLike): boolean {
   return typeof editor.getText === "function" && typeof editor.setText === "function";
 }
 
-async function flush(editor: EditorLike, draft: string): Promise<void> {
-  const started = live;
+// pi restores the queue synchronously as `queued + "\n\n" + draft`
+function splitRestored(restored: string, draft: string): string {
+  return draft && restored.endsWith(draft) ? restored.slice(0, restored.length - draft.length) : restored;
+}
+
+async function flush(editor: EditorLike, restored: string, draft: string): Promise<void> {
+  const queued = splitRestored(restored, draft).trimEnd();
+  if (!queued) return;
+
+  const started = state.live;
   const deadline = Date.now() + IDLE_TIMEOUT_MS;
   while (!ask((ctx) => ctx.isIdle(), true)) {
-    if (Date.now() > deadline || live !== started) return;
+    if (Date.now() > deadline || state.live !== started) return;
     await new Promise((resolve) => setTimeout(resolve, IDLE_POLL_MS));
   }
-  if (live !== started) return;
+  if (state.live !== started) return;
 
-  const restored = editor.getText?.() ?? "";
-  // the interrupt handler appends the untouched draft after the queued text
-  const queued = draft && restored.endsWith(draft) ? restored.slice(0, restored.length - draft.length) : restored;
-  if (!queued.trim()) return;
-
-  editor.setText?.(draft);
-  editor.addToHistory?.(queued.trimEnd());
-  editor.onSubmit?.(queued.trimEnd());
+  // keep anything typed during the wait instead of reverting to the old draft
+  const now = editor.getText?.() ?? "";
+  const typedSince = now.startsWith(restored) ? now.slice(restored.length) : "";
+  editor.setText?.(draft + typedSince);
+  // pi's own submit path calls addToHistory, so adding it here would duplicate
+  editor.onSubmit?.(queued);
 }
 
 // powerline installs its own editor after us (packages load after ~/.pi/agent/extensions)
@@ -64,6 +73,7 @@ function decorate(editor: EditorLike, keybindings: Keybindings): EditorLike {
   const original = editor.handleInput.bind(editor);
   editor.handleInput = (data: string) => {
     const flushing =
+      !state.flushing &&
       keybindings.matches(data, "app.interrupt") &&
       !editor.isShowingAutocomplete?.() &&
       !ask((ctx) => ctx.isIdle(), true) &&
@@ -72,7 +82,16 @@ function decorate(editor: EditorLike, keybindings: Keybindings): EditorLike {
 
     original(data);
 
-    if (flushing) void flush(editor, draft);
+    if (!flushing) return;
+    // read the restored buffer now: the restore is synchronous, and waiting until
+    // after the idle poll would fold anything typed meanwhile into the message
+    const restored = editor.getText?.() ?? "";
+    state.flushing = true;
+    void flush(editor, restored, draft)
+      .catch(() => {})
+      .finally(() => {
+        state.flushing = false;
+      });
   };
   return editor;
 }
@@ -80,25 +99,28 @@ function decorate(editor: EditorLike, keybindings: Keybindings): EditorLike {
 export default function (pi: ExtensionAPI) {
   pi.on("session_start", (_event, ctx) => {
     if (ctx.mode !== "tui") return;
-    live = ctx;
+    state.live = ctx;
 
     const ui = ctx.ui as typeof ctx.ui & { [PATCHED]?: boolean };
     if (ui[PATCHED]) return;
     ui[PATCHED] = true;
 
     const install = ctx.ui.setEditorComponent.bind(ctx.ui);
+    const wrap = (factory: (tui: TUI, theme: EditorTheme, kb: Keybindings) => unknown) =>
+      ((tui: TUI, theme: EditorTheme, kb: Keybindings) => decorate(factory(tui, theme, kb) as EditorLike, kb)) as never;
 
     ctx.ui.setEditorComponent = ((factory?: (tui: TUI, theme: EditorTheme, kb: Keybindings) => unknown) =>
-      install(((tui: TUI, theme: EditorTheme, kb: Keybindings) =>
-        decorate(
-          (factory ? factory(tui, theme, kb) : new CustomEditor(tui, theme, kb)) as EditorLike,
-          kb,
-        )) as never)) as typeof ctx.ui.setEditorComponent;
+      // passing undefined through unchanged keeps "restore pi's default editor"
+      // working for callers that rely on it
+      install(factory ? wrap(factory) : undefined)) as typeof ctx.ui.setEditorComponent;
 
-    ctx.ui.setEditorComponent(undefined);
+    const installed = ctx.ui.getEditorComponent?.();
+    ctx.ui.setEditorComponent(
+      installed ?? ((tui: TUI, theme: EditorTheme, kb: Keybindings) => new CustomEditor(tui, theme, kb) as never),
+    );
   });
 
   pi.on("session_shutdown", () => {
-    live = null;
+    state.live = null;
   });
 }

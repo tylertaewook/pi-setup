@@ -4,22 +4,39 @@
     {
       "from": 5,
       "to": 11,
-      "variants": ["gm, {name}", "morning, {name}", "gm patriot", "up early, {name}"]
+      "variants": [
+        "gm, {name}",
+        "morning, {name}",
+        "gm patriot",
+        "up early, {name}"
+      ]
     },
     {
       "from": 11,
       "to": 17,
-      "variants": ["afternoon, {name}", "back at it, {name}", "{name}, what are we shipping?"]
+      "variants": [
+        "afternoon, {name}",
+        "back at it, {name}",
+        "what are we shipping?"
+      ]
     },
     {
       "from": 17,
       "to": 22,
-      "variants": ["evening, {name}", "burning daylight, {name}", "one more thing, {name}?"]
+      "variants": [
+        "evening, {name}",
+        "burning daylight, {name}",
+        "one more thing, {name}?"
+      ]
     },
     {
       "from": 22,
       "to": 5,
-      "variants": ["night shift, {name}", "still up, {name}?", "sleep is also a feature, {name}"]
+      "variants": [
+        "night shift, {name}",
+        "still up, {name}?",
+        "sleep is a feature, {name}"
+      ]
     }
   ]
 }

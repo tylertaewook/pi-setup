@@ -1,6 +1,6 @@
---- a/welcome.ts	2026-08-24 18:04:03
-+++ b/welcome.ts	2026-08-24 18:04:03
-@@ -96,12 +96,65 @@
+--- a/welcome.ts	2026-08-24 18:27:13
++++ b/welcome.ts	2026-08-24 18:27:13
+@@ -96,12 +96,73 @@
    initialContextTokens: number | null;
  }
  
@@ -34,9 +34,10 @@
 +    };
 +    if (typeof parsed.name === "string") name = parsed.name;
 +    if (Array.isArray(parsed.buckets)) {
-+      const valid = (parsed.buckets as GreetingBucket[]).filter(
-+        (b) => typeof b?.from === "number" && typeof b?.to === "number" && Array.isArray(b?.variants) && b.variants.length > 0,
-+      );
++      const valid = (parsed.buckets as GreetingBucket[])
++        .filter((b) => typeof b?.from === "number" && typeof b?.to === "number" && Array.isArray(b?.variants))
++        .map((b) => ({ ...b, variants: b.variants.filter((v) => typeof v === "string" && v.length > 0) }))
++        .filter((b) => b.variants.length > 0);
 +      if (valid.length > 0) buckets = valid;
 +    }
 +  } catch {
@@ -53,7 +54,14 @@
 +// buildLeftColumn runs on every repaint, so picking per call made the variant
 +// flicker as the welcome screen re-rendered - decide once per process
 +export function welcomeGreeting(): string {
-+  if (cachedGreeting === undefined) cachedGreeting = resolveGreeting();
++  if (cachedGreeting === undefined) {
++    try {
++      cachedGreeting = resolveGreeting();
++    } catch {
++      // a greeting must never break the welcome render
++      cachedGreeting = "Welcome back!";
++    }
++  }
 +  return cachedGreeting;
 +}
 +

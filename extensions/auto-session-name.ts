@@ -31,7 +31,9 @@ function lastMarker(ctx: ExtensionContext): Marker | null {
   const entries = ctx.sessionManager.getEntries();
   for (let i = entries.length - 1; i >= 0; i--) {
     const entry = entries[i];
-    if (entry.type === "custom" && entry.customType === MARKER) return entry.data as Marker;
+    if (entry.type !== "custom" || entry.customType !== MARKER) continue;
+    const data = entry.data as Partial<Marker> | undefined;
+    if (typeof data?.name === "string" && typeof data.atTurn === "number") return { name: data.name, atTurn: data.atTurn };
   }
   return null;
 }
@@ -53,22 +55,19 @@ function fallbackName(ctx: ExtensionContext): string | null {
   return cleaned ? cleaned.slice(0, MAX_NAME) : null;
 }
 
-// ctx.getSessionName/setSessionName are unbound in headless print mode
-function currentName(ctx: ExtensionContext): string | undefined {
-  return ctx.sessionManager.getSessionName();
-}
-
-function applyName(ctx: ExtensionContext, name: string): boolean {
-  if (typeof ctx.setSessionName !== "function") return false;
-  ctx.setSessionName(name);
-  return true;
-}
-
 // pi owns the name once you /name it yourself, so only overwrite what we wrote
 function weOwnTheName(ctx: ExtensionContext, marker: Marker | null): boolean {
-  const current = currentName(ctx);
+  const current = ctx.sessionManager.getSessionName();
   if (!current) return true;
   return !!marker && current === marker.name;
+}
+
+// the highest threshold this session has passed, so a doubled turn count
+// (steering can land two user turns in one settle) still gets a title
+function dueThreshold(turns: number, marker: Marker | null): number | null {
+  const passed = TITLE_AT_USER_TURNS.filter((n) => turns >= n).pop();
+  if (passed === undefined) return null;
+  return marker && marker.atTurn >= passed ? null : passed;
 }
 
 function buildPrompt(ctx: ExtensionContext): string {
@@ -91,7 +90,7 @@ function buildPrompt(ctx: ExtensionContext): string {
   ].join("\n");
 }
 
-async function generateName(ctx: ExtensionContext): Promise<string | null> {
+async function generateName(pi: ExtensionAPI, ctx: ExtensionContext): Promise<string | null> {
   // -ne is what keeps this from recursing into another titler, the rest just makes it fast
   const args = [
     "--model",
@@ -108,8 +107,9 @@ async function generateName(ctx: ExtensionContext): Promise<string | null> {
     "-p",
     buildPrompt(ctx),
   ];
-  const result = await ctx.exec("pi", args, { timeout: TITLE_TIMEOUT_MS });
-  if (result.code !== 0) return null;
+  const result = await pi.exec("pi", args, { timeout: TITLE_TIMEOUT_MS });
+  // a killed child reports code 0, so partial output would look like a title
+  if (result.killed || result.code !== 0) return null;
   const name = result.stdout.trim().split("\n").pop()?.replace(/^["']|["']$/g, "").trim();
   return name ? name.slice(0, MAX_NAME) : null;
 }
@@ -117,27 +117,34 @@ async function generateName(ctx: ExtensionContext): Promise<string | null> {
 export default function (pi: ExtensionAPI) {
   let busy = false;
 
-  pi.on("agent_settled", async (_event, ctx) => {
-    if (busy || ctx.mode !== "tui" || typeof ctx.exec !== "function") return;
+  pi.on("agent_settled", (_event, ctx) => {
+    if (busy || ctx.mode !== "tui") return;
     const turns = userTurns(ctx).length;
     const marker = lastMarker(ctx);
-    if (!TITLE_AT_USER_TURNS.includes(turns)) return;
-    if (marker && marker.atTurn >= turns) return;
-    if (!weOwnTheName(ctx, marker)) return;
+    const due = dueThreshold(turns, marker);
+    if (due === null || !weOwnTheName(ctx, marker)) return;
 
+    // agent_settled is awaited before the session reports idle, so never block on
+    // the titler subprocess here
     busy = true;
-    try {
-      const name = await generateName(ctx);
-      if (!name || !applyName(ctx, name)) return;
-      ctx.appendEntry<Marker>(MARKER, { name, atTurn: turns });
-    } finally {
-      busy = false;
-    }
+    void (async () => {
+      try {
+        const name = await generateName(pi, ctx);
+        if (name) {
+          pi.setSessionName(name);
+          pi.appendEntry<Marker>(MARKER, { name, atTurn: turns });
+        }
+      } catch {
+        // a retired ctx, a missing pi binary, or a bad exit just means no title
+      } finally {
+        busy = false;
+      }
+    })();
   });
 
   pi.on("session_shutdown", (_event, ctx) => {
-    if (currentName(ctx)) return;
+    if (ctx.sessionManager.getSessionName()) return;
     const name = fallbackName(ctx);
-    if (name) applyName(ctx, name);
+    if (name) pi.setSessionName(name);
   });
 }

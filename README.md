@@ -11,7 +11,12 @@ git clone https://github.com/tylertaewook/pi-setup.git ~/pi-setup
 cd ~/pi-setup && ./install.sh
 ```
 
-It backs up anything it replaces to `<file>.bak-<timestamp>`, so it is safe to re-run. Then `pi auth` for provider credentials — those are never in here.
+It backs up anything it replaces to `~/.pi/agent/backups/<timestamp>/`, so it is safe to re-run. Then `pi auth` for provider credentials — those are never in here.
+
+```bash
+./scripts/verify.sh       # after any pi update: patches still applied, extensions still type-check
+./scripts/type-check.sh   # extensions against the installed pi's own .d.ts
+```
 
 ## What is tracked
 
@@ -23,6 +28,7 @@ It backs up anything it replaces to `<file>.bak-<timestamp>`, so it is safe to r
 | `agent/settings.json` | `~/.pi/agent/settings.json` | Theme, default model, thinking levels, and the package list `install.sh` reads |
 | `extensions/*.ts` | `~/.pi/agent/extensions/` | Local extensions (below) |
 | `patches/*.patch` | vendored deps | Local fixes to installed packages, reapplied by `install.sh` |
+| `scripts/*.sh` | — | `verify.sh` (post-update health check) and `type-check.sh` |
 | `skills/*` | `~/.agents/skills/` | Skills, vendored for exact replication |
 | `mcp/mcp.json` | `~/.config/mcp/mcp.json` | Shared MCP config (Figma desktop server) |
 | `background-bash/config.json` | `~/.pi-background-bash/config.json` | Auto-background threshold (15s instead of the 30s default) |
