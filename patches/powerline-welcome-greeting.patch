@@ -1,11 +1,9 @@
---- a/welcome.ts	2026-08-24 18:02:06
-+++ b/welcome.ts	2026-08-24 18:02:06
-@@ -94,6 +94,50 @@
-   recentSessions: RecentSession[];
-   loadedCounts: LoadedCounts;
+--- a/welcome.ts	2026-08-24 18:04:03
++++ b/welcome.ts	2026-08-24 18:04:03
+@@ -96,12 +96,65 @@
    initialContextTokens: number | null;
-+}
-+
+ }
+ 
 +type GreetingBucket = { from: number; to: number; variants: string[] };
 +
 +const DEFAULT_GREETING_BUCKETS: GreetingBucket[] = [
@@ -25,7 +23,7 @@
 +  return bucket.from <= bucket.to ? hour >= bucket.from && hour < bucket.to : hour >= bucket.from || hour < bucket.to;
 +}
 +
-+export function welcomeGreeting(now: Date = new Date(), pick: (n: number) => number = (n) => Math.floor(Math.random() * n)): string {
++export function resolveGreeting(now: Date = new Date(), pick: (n: number) => number = (n) => Math.floor(Math.random() * n)): string {
 +  let buckets = DEFAULT_GREETING_BUCKETS;
 +  let name: string | undefined;
 +
@@ -48,10 +46,19 @@
 +  const bucket = buckets.find((b) => inBucket(b, now.getHours())) ?? buckets[0];
 +  const variant = bucket.variants[pick(bucket.variants.length)] ?? bucket.variants[0];
 +  return variant.replace(/\{name\}/g, greetingName(name));
- }
- 
++}
++
++let cachedGreeting: string | undefined;
++
++// buildLeftColumn runs on every repaint, so picking per call made the variant
++// flicker as the welcome screen re-rendered - decide once per process
++export function welcomeGreeting(): string {
++  if (cachedGreeting === undefined) cachedGreeting = resolveGreeting();
++  return cachedGreeting;
++}
++
  function buildLeftColumn(data: WelcomeData, colWidth: number): string[] {
-@@ -101,7 +145,7 @@
+   const logoColored = PI_LOGO.map((line) => gradientLine(line));
    
    return [
      "",
