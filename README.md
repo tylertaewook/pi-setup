@@ -21,7 +21,7 @@ It backs up anything it replaces to `<file>.bak-<timestamp>`, so it is safe to r
 | `extensions/*.ts` | `~/.pi/agent/extensions/` | Local extensions (below) |
 | `skills/*` | `~/.agents/skills/` | Skills, vendored for exact replication |
 | `mcp/mcp.json` | `~/.config/mcp/mcp.json` | Shared MCP config (Figma desktop server) |
-| `background-bash/config.json` | `~/.pi-background-bash/config.json` | Auto-background threshold (10s instead of the 30s default) |
+| `background-bash/config.json` | `~/.pi-background-bash/config.json` | Auto-background threshold (15s instead of the 30s default) |
 | `shell/aliases.sh` | sourced from `~/.zshrc` | `pbb` for background-job inspection |
 
 ## Extensions
@@ -45,7 +45,7 @@ Installed from `agent/settings.json` by `install.sh`:
 - [`@houndmcp/hound-mcp-pi`](https://www.npmjs.com/package/@houndmcp/hound-mcp-pi) — keyless web search and fetch
 - [`pi-powerline-footer`](https://www.npmjs.com/package/pi-powerline-footer) — powerline status bar, editor stash, bash mode
 - [`pi-terminal-theme`](https://www.npmjs.com/package/pi-terminal-theme) — terminal-palette themes (installed; `dark` is active)
-- [`pi-background-bash`](https://github.com/mowenroot/pi-background-bash) — long commands stop blocking; results come back on their own. Threshold lowered to 10s in `background-bash/config.json`; a project can override it with `.pi/background-bash.json`.
+- [`pi-background-bash`](https://github.com/mowenroot/pi-background-bash) — long commands stop blocking; results come back on their own. Threshold lowered to 15s in `background-bash/config.json`; a project can override it with `.pi/background-bash.json`.
 
 ## Not tracked, on purpose
 
