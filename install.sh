@@ -59,6 +59,21 @@ while IFS= read -r pkg; do
   pi install "$pkg" >/dev/null || echo "    ! failed: $pkg" >&2
 done <<< "$PACKAGES"
 
+echo "==> patches"
+# pi-pending renders pbb's running-job row; upstream fills the whole terminal width,
+# which does not line up with the footer. node_modules is gitignored in the pbb
+# checkout, so any reinstall drops this and it has to be reapplied.
+PP_DIR="$HOME/.pi/agent/git/github.com/mowenroot/pi-background-bash"
+if [ -f "$PP_DIR/node_modules/pi-pending/index.ts" ]; then
+  if patch -p1 -d "$PP_DIR" --forward --silent < "$REPO/patches/pi-pending-compact-row.patch"; then
+    echo "    pi-pending compact row applied"
+  else
+    echo "    pi-pending compact row already applied (or upstream changed)"
+  fi
+else
+  echo "    ! pi-pending not found; run pi install first, then re-run this script" >&2
+fi
+
 echo "==> settings"
 # merge repo settings over whatever is already there, so machine-local keys survive
 backup "$AGENT_DIR/settings.json"

@@ -1,0 +1,22 @@
+--- a/node_modules/pi-pending/index.ts	2026-08-24 17:31:48
++++ b/node_modules/pi-pending/index.ts	2026-08-24 17:31:48
+@@ -71,7 +71,7 @@
+ }
+ 
+ const DEFAULT_WIDGET_ID = "pi-pending";
+-const DEFAULT_MIN_ELAPSED_COLUMN_WIDTH = "4m 16s".length;
++const DEFAULT_MIN_ELAPSED_COLUMN_WIDTH = "27s".length;
+ const GLOBAL_KEY = Symbol.for("pi-pending.globalState");
+ 
+ function globalState(): PiPendingGlobalState {
+@@ -152,7 +152,9 @@
+         const prefix = row.id
+           ? `${elapsed} ${padToWidth(row.id, idWidth)} `
+           : `${elapsed} `;
+-        const line = padToWidth(truncateToWidth(`${prefix}${row.body}`, width, "..."), width);
++        // hug the text instead of filling the terminal width, and take the same
++        // one-space left inset the footer lines use, so the row lines up with them
++        const line = ` ${truncateToWidth(`${prefix}${row.body}`, Math.max(1, width - 2), "...")} `;
+         return theme.bg("toolPendingBg", theme.fg("toolTitle", line));
+       });
+     },

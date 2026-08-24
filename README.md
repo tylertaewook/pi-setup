@@ -19,6 +19,7 @@ It backs up anything it replaces to `<file>.bak-<timestamp>`, so it is safe to r
 | `agent/AGENTS.md` | `~/.pi/agent/AGENTS.md` | Cross-repo working rules — verification habits, editing discipline, bun/turbo conventions |
 | `agent/settings.json` | `~/.pi/agent/settings.json` | Theme, default model, thinking levels, and the package list `install.sh` reads |
 | `extensions/*.ts` | `~/.pi/agent/extensions/` | Local extensions (below) |
+| `patches/*.patch` | vendored deps | Local fixes to installed packages, reapplied by `install.sh` |
 | `skills/*` | `~/.agents/skills/` | Skills, vendored for exact replication |
 | `mcp/mcp.json` | `~/.config/mcp/mcp.json` | Shared MCP config (Figma desktop server) |
 | `background-bash/config.json` | `~/.pi-background-bash/config.json` | Auto-background threshold (15s instead of the 30s default) |
@@ -26,13 +27,18 @@ It backs up anything it replaces to `<file>.bak-<timestamp>`, so it is safe to r
 
 ## Extensions
 
-Three local extensions, all reacting to pi's extension API rather than patching pi:
+Two local extensions, both reacting to pi's extension API rather than patching pi:
 
 | Extension | What it does |
 | --- | --- |
 | `auto-session-name.ts` | Names sessions so `/sessions` is readable instead of a wall of first messages. Titles at user turn 2, 15, and 50 via a cheap Haiku subprocess (~1.4s), never overwrites a name you set with `/name`, and falls back to a first-message heuristic on ctrl+c quit. |
 | `esc-flush-queue.ts` | `Esc` while the agent is streaming submits your queued messages instead of just aborting. Decorates whichever editor instance ends up installed, because `pi-powerline-footer` replaces the editor wholesale and packages load after `~/.pi/agent/extensions`. |
-| `pbb-footer.ts` | Shows running background jobs (`⚙ N bg` in the footer, per-job detail below the editor) by reading `pi-background-bash` job state. Counts a job as running only if its pid is actually alive — a job whose process group dies with `/reload` never gets a completion event and otherwise reads as running forever. |
+
+## Patches
+
+`patches/pi-pending-compact-row.patch` restyles the running-job row that `pi-background-bash` draws through `pi-pending`: upstream pads the line to the full terminal width and reserves a 6-column elapsed field, so the highlighted bar spans the screen and sits out of line with the footer. The patch makes the highlight hug the text with the same one-space inset the footer uses, and sizes the elapsed column to its content.
+
+`node_modules` is gitignored inside the `pi-background-bash` checkout, so a reinstall silently drops this. `install.sh` reapplies it, and `patch --forward` makes that a no-op when it is already in place.
 
 ## Packages
 
