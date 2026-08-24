@@ -41,6 +41,11 @@ for dir in "$REPO"/skills/*/; do
   cp -R "$dir" "$SKILLS_DIR/$name"
 done
 
+echo "==> background-bash threshold"
+mkdir -p "$HOME/.pi-background-bash"
+backup "$HOME/.pi-background-bash/config.json"
+cp "$REPO/background-bash/config.json" "$HOME/.pi-background-bash/config.json"
+
 echo "==> shared MCP config"
 backup "$MCP_DIR/mcp.json"
 cp "$REPO/mcp/mcp.json" "$MCP_DIR/mcp.json"
