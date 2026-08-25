@@ -14,6 +14,7 @@ Run `./scripts/verify.sh` first — it checks every item in the table below and 
 | Sessions stop getting names | titler subprocess failing or slow | `pi --model <haiku> --thinking off -ne -ns -np -nc --offline -p "hi"` |
 | pi crashes on `Esc` | a captured ctx outlived its session | stack trace naming `esc-flush-queue.ts` |
 | Long commands block again | pbb config or install missing | `cat ~/.pi-background-bash/config.json` |
+| Powerline shows `doi-chat` where an icon belongs | terminal is not on powerline's Nerd Font allowlist | `echo $POWERLINE_NERD_FONTS` in that terminal |
 
 Recovery for all patch-related rows: re-run `./install.sh`. It is idempotent.
 
@@ -176,6 +177,17 @@ The lesson is the general one: both wrong values were picked by *reading* the fo
 - `showLastPrompt: false` disables powerline's `↳ <last prompt>` echo under the prompt bar (`index.ts:1703`).
 - `MCP: 2 servers enabled` counts **configured** servers, not connected ones — figma (`~/.config/mcp/mcp.json`, only live with the Figma desktop app) and grafana (a project `.mcp.json`). Both connect lazily, so the count is normal.
 - The `terminal` theme maps everything to ANSI 0-15, which flattens tool/message background tints. That is why this setup is back on `dark` while `pi-terminal-theme` stays installed.
+
+## Powerline's Nerd Font detection is an allowlist, not a probe
+
+`pi-powerline-footer` decides between glyphs and ASCII by matching the terminal — iTerm, WezTerm, Kitty, Ghostty, Alacritty. Any other host, **Zed's built-in terminal included**, gets the ASCII fallback no matter which font is loaded, so path segments print `pi-setup` instead of a folder icon and the context segment loses its db glyph.
+
+The font is a separate failure with the same symptom, and both have to be right:
+
+- `POWERLINE_NERD_FONTS=1` in the terminal's env (`terminal.env` in `~/.config/zed/settings.json`; new tabs only, existing shells keep the old env).
+- A Nerd Font actually installed. Zed silently falls back when `terminal.font_family` names a missing family, and `MesloLGS NF` is not installed by p10k — only configured by it. Check the family string macOS exposes, which is not the filename: `system_profiler SPFontsDataType | grep -A14 JetBrainsMonoNerdFont-Regular.ttf` reports family `JetBrainsMono Nerd Font` for a file named `JetBrainsMonoNerdFont-Regular.ttf`.
+
+Fixing the font alone changes nothing, which is the misleading part — the glyphs never reach the terminal to be rendered.
 
 ## Verification habits that actually caught things here
 
