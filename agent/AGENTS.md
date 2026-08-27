@@ -69,6 +69,13 @@ Sonnet 5. You're fine."
 projected month-end, and remaining budget. Warn early if ahead of schedule — don't wait for
 month-end.
 
+**Spend tracking.** The `bedrock-cost` extension is the source of truth: it sums pi's own per-turn cost
+from the session logs (Bedrock is only used through pi, so this equals the bill) and shows a boot widget
+plus `/cost`. It counts spend from an anchor date stored in `~/.pi/agent/.bedrock-cost.json`, because the
+Bedrock key rotates ~every 30 days and pre-rotation spend was billed to the old key. **When Tyler says he
+rotated/issued a new key, run `/cost rotate`** (or write today's date as `{"anchor":"YYYY-MM-DD"}` into that
+file) so counting restarts from the new key. The widget also shows days left on the current key.
+
 ## Verification
 
 - **Render and visual tests are Tyler's to write, and Playwright is not the tool.** Do not add Playwright
