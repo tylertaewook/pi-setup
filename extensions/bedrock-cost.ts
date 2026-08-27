@@ -87,7 +87,7 @@ type Report = {
   todayIsCurrent: boolean;
   mtd: number;
   monthPct: number;
-  projected: number;
+  elapsedFraction: number;
   remaining: number;
   estimated: boolean;
   stale: boolean;
@@ -99,24 +99,31 @@ function analyze(snap: Snapshot, now: Date): Report {
   const last = snap.days.at(-1);
   const today = last?.amount ?? 0;
   const todayDate = last?.date ?? ymd(now);
-  const projected = elapsedFraction > 0 ? mtd / elapsedFraction : mtd;
   return {
     today,
     todayDate,
     todayIsCurrent: todayDate === ymd(now),
     mtd,
     monthPct: Math.round((elapsedFraction * 100 + Number.EPSILON) * 10) / 10,
-    projected,
+    elapsedFraction,
     remaining: MONTHLY_LIMIT - mtd,
     estimated: snap.estimated,
     stale: Date.now() - snap.fetchedAt > BOOT_TTL_MS,
   };
 }
 
-function pace(projected: number): { word: string; icon: string } {
-  if (projected > MONTHLY_LIMIT) return { word: "OVER $5k LIMIT", icon: "\u{1F6A8}" };
-  if (projected > MONTHLY_LIMIT * 0.9) return { word: "near limit", icon: "\u26A0\uFE0F" };
-  return { word: "on track", icon: "\u2705" };
+function status(mtd: number, elapsedFraction: number): { word: string; icon: string } {
+  if (mtd > MONTHLY_LIMIT) return { word: "over $5k limit", icon: "\u{1F534}" };
+  const paceRatio = elapsedFraction > 0 ? mtd / MONTHLY_LIMIT / elapsedFraction : 0;
+  if (paceRatio > 1.1) return { word: "ahead of pace", icon: "\u{1F7E1}" };
+  return { word: "on track", icon: "\u{1F7E2}" };
+}
+
+function budgetBar(mtd: number, width = 16): string {
+  const frac = Math.max(0, Math.min(1, mtd / MONTHLY_LIMIT));
+  const filled = Math.round(frac * width);
+  const pct = Math.round((mtd / MONTHLY_LIMIT) * 100);
+  return `[${"\u2588".repeat(filled)}${"\u2591".repeat(width - filled)}] ${pct}% of ${money(MONTHLY_LIMIT)}`;
 }
 
 function dailyAlert(today: number): string | null {
@@ -196,22 +203,22 @@ function modelRatio(entries: Entry[]): string {
 }
 
 function bootLines(r: Report): string[] {
-  const { word, icon } = pace(r.projected);
+  const { word, icon } = status(r.mtd, r.elapsedFraction);
   const dayLabel = r.todayIsCurrent ? "today" : `on ${r.todayDate}`;
   return [
     `${icon} Bedrock ${money(r.today)} ${dayLabel} \u00B7 ${money(r.mtd)}/${money(MONTHLY_LIMIT)} MTD (${r.monthPct}% of month)`,
-    `   pace \u2192 ${money(r.projected)}/mo \u00B7 ${word}${r.stale ? " \u00B7 cached" : ""}`,
+    `   ${budgetBar(r.mtd)} \u00B7 ${word}${r.stale ? " \u00B7 cached" : ""}`,
   ];
 }
 
 function fullReport(r: Report): string {
-  const { word, icon } = pace(r.projected);
+  const { word, icon } = status(r.mtd, r.elapsedFraction);
   const alert = dailyAlert(r.today);
   const lines = [
     `Bedrock spend (Cost Explorer, ${PROFILE}${r.estimated ? ", estimated" : ""})`,
     `  ${r.todayIsCurrent ? "Today" : `Latest (${r.todayDate})`}:  ${money(r.today)}  (daily target ${money(DAILY_TARGET)})`,
     `  Month-to-date:  ${money(r.mtd)}  \u2014 ${r.monthPct}% of month elapsed`,
-    `  Projected month-end:  ${money(r.projected)}  ${icon} ${word}`,
+    `  ${budgetBar(r.mtd)}  ${icon} ${word}`,
     `  Remaining this month (${money(MONTHLY_LIMIT)} limit):  ${money(r.remaining)}`,
   ];
   if (!r.todayIsCurrent) lines.push(`  Note: CE has not posted today yet; latest day is ${r.todayDate}.`);
@@ -235,7 +242,7 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.registerCommand("cost", {
-    description: "Bedrock spend today / MTD / projected (AWS Cost Explorer)",
+    description: "Bedrock spend today / MTD / budget bar (AWS Cost Explorer)",
     handler: async (args, ctx) => {
       const force = /\b(refresh|force|now)\b/i.test(args ?? "");
       try {
@@ -244,7 +251,7 @@ export default function (pi: ExtensionAPI) {
         const report = analyze(snap, now);
         ctx.ui.setWidget("bedrock-cost", bootLines(report));
         const sections = [fullReport(report), dailyTrend(snap), modelRatio(ctx.sessionManager.getEntries() as unknown as Entry[])].filter(Boolean);
-        ctx.ui.notify(sections.join("\n\n"), report.projected > MONTHLY_LIMIT * 0.9 ? "warn" : "info");
+        ctx.ui.notify(sections.join("\n\n"), status(report.mtd, report.elapsedFraction).icon === "\u{1F7E2}" ? "info" : "warn");
       } catch (err) {
         ctx.ui.notify(`Cost lookup failed: ${(err as Error).message}`, "error");
       }
