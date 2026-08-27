@@ -191,9 +191,12 @@ function keyLine(s: Stats): string {
 
 function bootLines(s: Stats): string[] {
   const { word, icon } = status(s.mtd, s.elapsedFraction);
+  const width = 14;
+  const filled = Math.round(Math.max(0, Math.min(1, s.mtd / MONTHLY_LIMIT)) * width);
+  const barStr = "\u2588".repeat(filled) + "\u2591".repeat(width - filled);
+  const pct = Math.round((s.mtd / MONTHLY_LIMIT) * 100);
   return [
-    `${icon} pi spend ${money(s.today)} today \u00B7 ${money(s.mtd)}/${money(MONTHLY_LIMIT)} MTD (${s.monthPct}% of month)`,
-    `   ${budgetBar(s.mtd)} \u00B7 ${word} \u00B7 ${s.keyDaysLeft}d on key`,
+    `${icon} ${money(s.today)} today \u00B7 ${money(s.mtd)}/$5k MTD ${barStr} ${pct}% \u00B7 ${word} \u00B7 ${s.keyDaysLeft}d key`,
   ];
 }
 
