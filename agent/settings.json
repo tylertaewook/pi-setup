@@ -1,7 +1,7 @@
 {
   "theme": "dark",
   "defaultProvider": "amazon-bedrock",
-  "defaultModel": "us.anthropic.claude-opus-5",
+  "defaultModel": "us.anthropic.claude-sonnet-5",
   "packages": [
     "npm:pi-subagents",
     "npm:pi-messenger",
@@ -12,12 +12,18 @@
     "npm:pi-terminal-theme",
     "git:github.com/mowenroot/pi-background-bash"
   ],
-  "defaultThinkingLevel": "medium",
+  "defaultThinkingLevel": "low",
   "hideThinkingBlock": true,
   "modelThinkingLevels": {
     "amazon-bedrock/us.anthropic.claude-opus-5": "low"
   },
   "showLastPrompt": false,
+  "powerline": {
+    "preset": "default",
+    "disabledSegments": [
+      "cost"
+    ]
+  },
   "observational-memory": {
     "model": {
       "provider": "amazon-bedrock",

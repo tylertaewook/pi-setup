@@ -42,6 +42,7 @@ Two local extensions, both reacting to pi's extension API rather than patching p
 | --- | --- |
 | `auto-session-name.ts` | Names sessions so `/sessions` is readable instead of a wall of first messages. Titles at user turn 2, 15, and 50 via a cheap Haiku subprocess (~1.4s), never overwrites a name you set with `/name`, and falls back to a first-message heuristic on ctrl+c quit. |
 | `esc-flush-queue.ts` | `Esc` while the agent is streaming submits your queued messages instead of just aborting. Decorates whichever editor instance ends up installed, because `pi-powerline-footer` replaces the editor wholesale and packages load after `~/.pi/agent/extensions`. |
+| `bedrock-cost.ts` | AWS Bedrock spend against a single **$5k/mo** limit. Paints a boot widget (today / MTD / projected month-end) and registers `/cost` for a full report plus ASCII charts: daily spend trend from Cost Explorer, and this session's per-model cost ratio from the session entries. Reads CE via the `doi-dev` profile; results are cached 6h because every `GetCostAndUsage` call bills $0.01. |
 
 ## Patches
 

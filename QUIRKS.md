@@ -14,6 +14,7 @@ Run `./scripts/verify.sh` first — it checks every item in the table below and 
 | Sessions stop getting names | titler subprocess failing or slow | `pi --model <haiku> --thinking off -ne -ns -np -nc --offline -p "hi"` |
 | pi crashes on `Esc` | a captured ctx outlived its session | stack trace naming `esc-flush-queue.ts` |
 | Long commands block again | pbb config or install missing | `cat ~/.pi-background-bash/config.json` |
+| `/cost` or the boot spend line is missing/empty | no CE creds, or the `doi-dev` profile is gone | `aws ce get-cost-and-usage --profile doi-dev --time-period Start=$(date +%Y-%m-01),End=$(date -v+1d +%Y-%m-%d) --granularity MONTHLY --metrics UnblendedCost --filter '{"Dimensions":{"Key":"SERVICE","Values":["Amazon Bedrock"]}}'` |
 | Powerline shows `doi-chat` where an icon belongs | terminal is not on powerline's Nerd Font allowlist | `echo $POWERLINE_NERD_FONTS` in that terminal |
 
 Recovery for all patch-related rows: re-run `./install.sh`. It is idempotent.
@@ -67,6 +68,12 @@ Rules that follow, and they are not optional:
 - In async work, re-check that the ctx identity has not changed after each `await`.
 
 `esc-flush-queue.ts` does all three; its fallback for "is the agent idle?" is `true`, meaning a stale ctx costs that keypress's flush rather than the process.
+
+## bedrock-cost.ts leans on two things pi does not guarantee
+
+**Cost Explorer, not a live meter.** Spend comes from `aws ce get-cost-and-usage` through the `doi-dev` profile, filtered to service `Amazon Bedrock`. Two consequences baked into the extension: CE lags (the current day often reads `$0.00` until AWS posts it, so the boot line labels the latest posted day rather than claiming it is "today"), and every `GetCostAndUsage` call bills **$0.01** — so results are cached to `~/.pi/agent/.bedrock-cost-cache.json` for 6h and only `/cost refresh` forces a new call. **What breaks it:** the `doi-dev` profile going away, losing `ce:GetCostAndUsage`, or the account's Bedrock spend not living in that profile's account. **Symptom:** the boot widget silently doesn't render (the `session_start` handler swallows errors so a creds failure never interrupts startup); run the `/cost` command to see the actual error.
+
+**The per-model chart replicates a pi internal.** `getUsageCostBreakdown` is not exported from `@earendil-works/pi-coding-agent`, so the extension re-implements it over `ctx.sessionManager.getEntries()`: it walks assistant messages for `message.usage.cost.total` keyed by `provider/responseModel`, and buckets `toolResult`/`compaction`/`branch_summary` usage as `tools/summaries`. **What breaks it:** pi renaming those entry fields or changing the `Usage` shape (`{ input, output, cacheRead, cacheWrite, cost.total }`). **Symptom:** the "this session by model" chart is empty or throws inside `/cost` while the CE sections still render. If pi ever exports the helper, delete the local copy and import it.
 
 Related, and worse: **a floating promise from an input handler can kill pi.** Node's default is `--unhandled-rejections=throw`, so a rejection from `void flush(...)` terminates the process. Every fire-and-forget path started from a keystroke needs `.catch()`.
 
