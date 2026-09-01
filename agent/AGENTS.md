@@ -2,80 +2,6 @@
 
 Cross-repo working rules. Repo-specific facts belong in that repo's `AGENTS.md` / `CLAUDE.md`, not here.
 
-## AI inference budget & model policy
-
-Standing cost-governance policy for Tyler's day-to-day engineering (~10h/day, 5 days/week). Treat cost as a
-real constraint; never encourage consuming the whole budget just because it exists. I don't have a live
-billing feed — track spend from model/task usage this session and say plainly when a number is an estimate.
-
-**Budget limits.** Monthly target = hard ceiling **$5,000/mo** (no separate reserve); weekly
-**~$920**; workday **~$185**; **~$18/hour** while coding. The weekly/daily figures still pace to ~$4k/mo,
-so they act as the tighter day-to-day guardrail under the $5k cap.
-
-**Daily spend alerts** (today's spend):
-- **$50** — informational only.
-- **$100** — report tracking vs the $185 daily target.
-- **$140** — warn, ~75% of today's target used.
-- **$185** — target reached; recommend cheaper models unless the work is important.
-- **$225** — strong warning; expensive models only for genuinely difficult work.
-- **$250+** — abnormal; tell him to investigate immediately.
-
-Also warn if: averaging **>$25/hr** for multiple hours; spend suddenly accelerates vs the prior hour; one
-agent/task is a disproportionate share; retries/loops burn tokens without progress; today's pace implies
-**>$5,000/mo**. Every warning states: (1) current spend, (2) projected today, (3) projected month at this
-pace, (4) which model/task is responsible, (5) the cheaper model/behavior to switch to.
-
-**Model tiers:**
-- **Default — Claude Sonnet 5** for normal engineering: features, debugging, repo exploration, multi-file
-  edits, refactors, tests, code review, terminal/tools, normal architecture and agentic work. Use
-  moderate/medium reasoning; never default to the highest effort.
-- **Cheap — GPT-5.6 Luna** when a frontier coder is overkill: summarizing logs, classifying, extracting
-  fields, search/ranking, formatting, simple transforms/boilerplate, simple explanations, routing,
-  summarizing prior agent context, compressing tool output before an expensive model.
-- **Alternative — GPT-5.6 Terra**: general-purpose reasoning/coding. Don't bounce between it and Sonnet;
-  use only when Sonnet does poorly here, Tyler asks for OpenAI, or prior results favor Terra.
-- **Escalation — Claude Opus 5** (never by default): Sonnet already made a serious attempt and is stuck;
-  unusually deep debugging; important architecture decision; hard cross-cutting change over a large
-  codebase; cheaper attempts would likely cost more than one Opus run; or Tyler asks. Say why the
-  escalation is justified. Prefer **Opus 5 over Opus 4.8**.
-- **GPT-5.6 Sol — restricted**: never auto-select; recommend only when a specific task's need clearly
-  justifies its much higher cost.
-
-Flow: simple → Luna; normal SWE → Sonnet 5; hard → Sonnet 5 with more effort; stuck/exceptionally
-important → Opus 5. Optimize for **cost per successful task**, not cheapest tokens — a $2 Opus run that
-avoids $10 of failed cheap loops is fine; a marginally-better expensive answer is not.
-
-**Context & token discipline.** Don't resend the whole conversation or unchanged files; retrieve only
-relevant files; summarize stale history; compress/truncate large logs and tool output; reuse cached
-context; don't dump a codebase or regenerate info already in hand. Input-token heuristics: <32k normal;
-32–64k pay attention; 64–128k ask if all context is needed; 128k+ warn unless truly required; warn near
-long-context pricing thresholds. A big context window is not permission to fill it.
-
-**Output discipline.** Output costs more than input. Be concise; for coding: inspect → reason → modify →
-test → report succinctly. No huge prose after each step, no restating the plan.
-
-**Loop protection.** Watch for runaway autonomy: repeating a failing command, reopening the same files,
-rewriting without meaningful change, recursive subagents, retries without a changed strategy, growing
-context, huge logs fed back in, identical repeated test failures, a model calling itself. After **3
-substantially similar failed attempts, stop and reassess**. If spend is high without measurable progress,
-tell him to interrupt. **A stuck agent must never silently burn money — prioritize alerting over
-continuing autonomously.**
-
-**Checkpoints while working** (short, non-intrusive): ~25%, ~50%, ~75% of the daily target, at $185, and
-immediately on anomalies. e.g. "AI spend today: $112 — 61% of your $185 target, on pace for ~$174. Mostly
-Sonnet 5. You're fine."
-
-**Monthly pacing.** Track month-to-date spend, % of month elapsed, % of the $5,000 target consumed,
-projected month-end, and remaining budget. Warn early if ahead of schedule — don't wait for
-month-end.
-
-**Spend tracking.** The `bedrock-cost` extension is the source of truth: it sums pi's own per-turn cost
-from the session logs (Bedrock is only used through pi, so this equals the bill) and shows a boot widget
-plus `/cost`. It counts spend from an anchor date stored in `~/.pi/agent/.bedrock-cost.json`, because the
-Bedrock key rotates ~every 30 days and pre-rotation spend was billed to the old key. **When Tyler says he
-rotated/issued a new key, run `/cost rotate`** (or write today's date as `{"anchor":"YYYY-MM-DD"}` into that
-file) so counting restarts from the new key. The widget also shows days left on the current key.
-
 ## Verification
 
 - **Render and visual tests are Tyler's to write, and Playwright is not the tool.** Do not add Playwright
@@ -120,6 +46,14 @@ reorder steps, and don't act ahead of Tyler.
 5. **Wait for the go.** Tyler says "yes" or "edit this" — only then do you act on the agreed set.
 6. **Summarize on the PR.** After acting, leave a PR comment summarizing the findings and what was acted
    on (and what was intentionally not, with reasons).
+
+## Email drafting
+
+When Tyler drafts an email with me, iterate on the wording in chat as normal. When he says he's ready ("copy that", "ready", etc.), copy the final draft straight to his macOS clipboard with `pbcopy`, keeping each paragraph as a single long line (no mid-paragraph newlines) so his mail client soft-wraps it and no terminal line breaks get baked in. Also save a copy to an ephemeral file (e.g. `/tmp/*.txt`). Don't make him select text from the terminal.
+
+## Obsidian
+
+- Tyler's Obsidian vault is at `~/Documents/nds-obsidian`. When he asks to create a doc "in obsidian," write it there.
 
 ## Repos under ~/Documents/nds
 

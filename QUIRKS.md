@@ -14,8 +14,6 @@ Run `./scripts/verify.sh` first — it checks every item in the table below and 
 | Sessions stop getting names | titler subprocess failing or slow | `pi --model <haiku> --thinking off -ne -ns -np -nc --offline -p "hi"` |
 | pi crashes on `Esc` | a captured ctx outlived its session | stack trace naming `esc-flush-queue.ts` |
 | Long commands block again | pbb config or install missing | `cat ~/.pi-background-bash/config.json` |
-| `/cost` or the boot spend line is missing/empty | session logs unreadable, or dir moved | `ls ~/.pi/agent/sessions` and run `/cost` to see the error |
-| Spend number looks way too high after a key rotation | anchor not moved to the new key's start | `/cost rotate`, or check `~/.pi/agent/.bedrock-cost.json` |
 | Powerline shows `doi-chat` where an icon belongs | terminal is not on powerline's Nerd Font allowlist | `echo $POWERLINE_NERD_FONTS` in that terminal |
 
 Recovery for all patch-related rows: re-run `./install.sh`. It is idempotent.
@@ -69,12 +67,6 @@ Rules that follow, and they are not optional:
 - In async work, re-check that the ctx identity has not changed after each `await`.
 
 `esc-flush-queue.ts` does all three; its fallback for "is the agent idle?" is `true`, meaning a stale ctx costs that keypress's flush rather than the process.
-
-## bedrock-cost.ts sums the session logs, and that has two footguns
-
-**It counts pi's own per-turn cost, not the AWS bill.** Spend is pi's token-count × model-price estimate read from `~/.pi/agent/sessions/**/*.jsonl` (`message.usage.cost.total`), summed by local day. This is deliberate: the Bedrock bearer key bills a different AWS account than the only usable CLI profile (`doi-dev`), and the key can't call Cost Explorer anyway — so CE would show the wrong account. Because Bedrock is only ever used through pi here, the log sum is the truest number available, and it's local/real-time/free. **What breaks it:** pi renaming the `Usage` shape (`cost.total`) or the session entry fields (`type:"message"`, `message.provider/responseModel`, `timestamp`). **Symptom:** `/cost` shows `$0.00` everywhere while sessions clearly have usage.
-
-**Fork/clone double-counts unless deduped, and rotation resets the anchor.** `/fork` and `/clone` copy entries verbatim into a new session file, so the scanner dedupes by entry `id` — drop that and a forked branch's cost is counted twice. And spend is only summed from an anchor date in `~/.pi/agent/.bedrock-cost.json` (seeded to the last known key-issue date), because the ~30-day Bedrock key rotates and pre-rotation spend was billed to the old key; month-start wins once a new calendar month passes the anchor. **What breaks it:** forgetting to move the anchor on a new key — old spend then inflates MTD. **Fix:** `/cost rotate` stamps today; or when Tyler says he rotated, the agent writes `{"anchor":"YYYY-MM-DD"}` there. The boot widget shows days left on the key and nags at ≤5d.
 
 Related, and worse: **a floating promise from an input handler can kill pi.** Node's default is `--unhandled-rejections=throw`, so a rejection from `void flush(...)` terminates the process. Every fire-and-forget path started from a keystroke needs `.catch()`.
 

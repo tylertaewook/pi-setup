@@ -1,7 +1,7 @@
 {
   "theme": "dark",
   "defaultProvider": "amazon-bedrock",
-  "defaultModel": "us.anthropic.claude-sonnet-5",
+  "defaultModel": "us.anthropic.claude-opus-4-8",
   "packages": [
     "npm:pi-subagents",
     "npm:pi-messenger",
@@ -19,10 +19,7 @@
   },
   "showLastPrompt": false,
   "powerline": {
-    "preset": "default",
-    "disabledSegments": [
-      "cost"
-    ]
+    "preset": "default"
   },
   "observational-memory": {
     "model": {

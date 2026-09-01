@@ -150,6 +150,6 @@ Every task is complete work, not a sketch.
 - **doi-chat**: bun + turbo, `AGENTS.md` is a symlink to `CLAUDE.md` — read it before touching that repo. Its AWS migration lives on `origin/develop` (owner: Dan Warner), tracked as `beads` issues in `.beads/issues.jsonl` (`doi-chat-0jm*`), specs in `specs/`, ADRs in `docs/dev-notes/`. Dual-runtime Cloudflare + AWS is permanent, not a migration. Base AWS-adjacent branches on `origin/develop`, not `main`.
 - **america**: AWS migration owner is Marko; state and gates live in `specs/aws-migration/` on `origin/mj/aws-migrate-r1`, infra branches are `origin/edward/tf-*`. Branches are mid-flight — never present their contents as applied or verified.
 - When porting across repos, say where each artifact came from (repo, branch, commit) and what does **not** transfer.
-- Prefer a git worktree (`../<repo>-<topic>`) over switching branches in a repo Tyler may have open.
+- Default to working in the main repository checkout. Do not create a git worktree unless Tyler explicitly asks for one. In `doi-chat`, the working branch is `tyler/evals-onboarding` unless told otherwise.
 - Never commit AI/agent attribution in any of these repos.
 - **PRs in these repos notify the whole team.** No `gh pr create` (or edit/reopen/ready-for-review) without Tyler explicitly asking for it, even when the work is finished and pushed.
